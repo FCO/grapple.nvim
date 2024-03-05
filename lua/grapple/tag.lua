@@ -28,13 +28,19 @@ function Tag:select(command)
     command = command or vim.cmd.edit
     command(short_path)
 
-    -- If the cursor has already been set, update instead
+    -- The cursor has already been set, don't set again
     local current_cursor = vim.api.nvim_win_get_cursor(0)
     if current_cursor[1] > 1 or current_cursor[2] > 0 then
-        self.cursor = current_cursor
-    else
-        pcall(vim.api.nvim_win_set_cursor, 0, self.cursor)
+        return
     end
+
+    local last_line = vim.fn.line("$")
+    local cursor = {
+        math.min(last_line, self.cursor[1]),
+        self.cursor[2], -- allowed to be past the last column
+    }
+
+    vim.api.nvim_win_set_cursor(0, cursor)
 end
 
 -- Implements Serialize

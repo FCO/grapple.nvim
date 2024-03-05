@@ -56,10 +56,10 @@ end
 ---@param opts? grapple.options
 function Grapple.tag(opts)
     local App = require("grapple.app")
+    local app = App.get()
 
     opts = opts or {}
 
-    local app = App.get()
     app:enter_with_save(opts.scope, function(container)
         local path, err = extract_path(opts)
         if not path then
@@ -76,10 +76,10 @@ end
 ---@param opts? grapple.options
 function Grapple.untag(opts)
     local App = require("grapple.app")
+    local app = App.get()
 
     opts = opts or {}
 
-    local app = App.get()
     app:enter_with_save(opts.scope, function(container)
         local path, err = extract_path(opts)
         if not path then
@@ -96,10 +96,10 @@ end
 ---@param opts? grapple.options
 function Grapple.toggle(opts)
     local App = require("grapple.app")
+    local app = App.get()
 
     opts = opts or {}
 
-    local app = App.get()
     app:enter_with_save(opts.scope, function(container)
         local path, err = extract_path(opts)
         if not path then
@@ -120,11 +120,11 @@ end
 ---@param opts? grapple.options
 function Grapple.select(opts)
     local App = require("grapple.app")
+    local app = App.get()
 
     opts = opts or {}
 
-    local app = App.get()
-    app:enter_with_save(opts.scope, function(container)
+    app:enter_without_save(opts.scope, function(container)
         local path, _ = extract_path(opts)
         opts.path = path
 
@@ -144,9 +144,8 @@ end
 ---or loaded scope (id). By default, uses the current scope
 ---@param opts? { scope?: string, id?: string }
 function Grapple.quickfix(opts)
-    local App = require("grapple.app")
     local Path = require("grapple.path")
-
+    local App = require("grapple.app")
     local app = App.get()
 
     opts = opts or {}
@@ -207,10 +206,12 @@ end
 ---@param direction "forward" | "backward"
 ---@param opts? grapple.options
 function Grapple.cycle(direction, opts)
+    local App = require("grapple.app")
+    local app = App.get()
+
     opts = opts or {}
 
-    local app = require("grapple.app").get()
-    app:enter_with_save(opts.scope, function(container)
+    app:enter_without_save(opts.scope, function(container)
         if container:is_empty() then
             return
         end
@@ -233,7 +234,7 @@ function Grapple.cycle(direction, opts)
         end
 
         ---@diagnostic disable-next-line: redefined-local
-        local err = tag:select()
+        local err = tag:select(opts.command)
         if err then
             return err
         end
@@ -244,11 +245,11 @@ end
 ---@param opts? grapple.options
 function Grapple.exists(opts)
     local App = require("grapple.app")
+    local app = App.get()
 
     opts = opts or {}
 
     local exists = false
-    local app = App.get()
     app:enter_without_save(opts.scope, function(container)
         local path, _ = extract_path(opts)
         opts.path = path
@@ -264,13 +265,13 @@ end
 ---@return string | integer | nil
 function Grapple.name_or_index(opts)
     local App = require("grapple.app")
+    local app = App.get()
 
     opts = opts or {}
 
     ---@type string | integer | nil
     local name_or_index
 
-    local app = App.get()
     app:enter_without_save(opts.scope, function(container)
         local path, _ = extract_path(opts)
         opts.path = path
@@ -303,6 +304,7 @@ end
 function Grapple.statusline()
     local App = require("grapple.app")
     local app = App.get()
+
     local icon = app.settings.icons and "󰛢 " or ""
 
     local key = Grapple.name_or_index()
@@ -316,10 +318,10 @@ end
 ---@return grapple.tag[] | nil, string? error
 function Grapple.tags(opts)
     local App = require("grapple.app")
+    local app = App.get()
 
     opts = opts or {}
 
-    local app = App.get()
     local scope, err = app.scope_manager:get_resolved(opts.scope or app.settings.scope)
     if not scope then
         return nil, err
@@ -423,12 +425,11 @@ end
 ---or loaded scope (id). By default, uses the current scope
 ---@param opts? { scope?: string, id?: string }
 function Grapple.open_tags(opts)
-    local App = require("grapple.app")
     local TagContent = require("grapple.tag_content")
+    local App = require("grapple.app")
+    local app = App.get()
 
     opts = opts or {}
-
-    local app = App.get()
 
     local scope, err
     if opts.id then
