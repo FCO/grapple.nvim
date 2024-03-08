@@ -1,4 +1,5 @@
 local Path = require("grapple.path")
+local Util = require("grapple.util")
 
 ---@class grapple.container_content
 ---@field tag_manager grapple.tag_manager
@@ -73,9 +74,13 @@ function ContainerContent:entities()
         return string.lower(cont_a.id) < string.lower(cont_b.id)
     end
 
-    ---@type grapple.tag_container[]
-    local containers = vim.tbl_values(self.tag_manager.containers)
-    table.sort(containers, by_id)
+    local loaded = self.tag_manager:list_loaded()
+    table.sort(loaded, by_id)
+
+    local unloaded = self.tag_manager:list_unloaded()
+    table.sort(unloaded, by_id)
+
+    local containers = Util.add(loaded, unloaded)
 
     local entities = {}
 
@@ -116,31 +121,64 @@ function ContainerContent:create_entry(entity, index)
     local line = string.format("%s %s", id, rel_id)
     local min_col = assert(string.find(line, "%s")) -- width of id
 
+    -- Define line highlights for display and extmarks
+    ---@type grapple.vim.highlight[]
+    local highlights = {}
+
     local sign_highlight
     if app.settings.status and entity.current then
         sign_highlight = "GrappleCurrent"
     end
 
+    local unloaded_highlight
+    if not self.tag_manager:is_loaded(container.id) then
+        unloaded_highlight = {
+            hl_group = "GrappleHint",
+            line = index - 1,
+            col_start = min_col,
+            col_end = -1,
+        }
+    end
+
+    highlights = vim.tbl_filter(Util.not_nil, {
+        unloaded_highlight,
+    })
+
+    -- Define line extmarks
+    ---@type grapple.vim.extmark[]
+    local extmarks = {}
+
     ---@type grapple.vim.mark
-    local sign_mark = {
-        sign_text = string.format("%d", index),
-        sign_hl_group = sign_highlight,
-    }
+    local sign_mark
+    if index < 10 then
+        sign_mark = {
+            sign_text = string.format("%d", index),
+            sign_hl_group = sign_highlight,
+        }
+    end
 
-    local count = container:len()
-    local count_text = count == 1 and "tag" or "tags"
-    local count_mark = {
-        virt_text = { { string.format("[%d %s]", count, count_text) } },
-        virt_text_pos = "eol",
-    }
+    local count_mark
+    if self.tag_manager:is_loaded(container.id) then
+        local count = container:len()
+        local count_text = count == 1 and "tag" or "tags"
+        count_mark = {
+            virt_text = { { string.format("[%d %s]", count, count_text) } },
+            virt_text_pos = "eol",
+        }
+    end
 
-    local extmarks = vim.tbl_map(function(mark)
+    extmarks = vim.tbl_filter(Util.not_nil, {
+        sign_mark,
+        count_mark,
+    })
+
+    extmarks = vim.tbl_map(function(mark)
         return {
             line = index - 1,
             col = 0,
             opts = mark,
         }
-    end, { sign_mark, count_mark })
+    end, extmarks)
 
     ---@type grapple.window.entry
     local entry = {
@@ -154,7 +192,7 @@ function ContainerContent:create_entry(entity, index)
         min_col = min_col,
 
         ---@type grapple.vim.highlight[]
-        highlights = {},
+        highlights = highlights,
 
         ---@type grapple.vim.extmark[]
         extmarks = extmarks,
